@@ -1,8 +1,8 @@
 import cv2
 from ultralytics import YOLO
 
-# Load the helmet detection model
-model = YOLO("helmet_model.pt")
+# Load trained HELMGUARD model
+model = YOLO("best.pt")
 
 # Start webcam
 cap = cv2.VideoCapture(0)
@@ -15,42 +15,50 @@ print("HELMGUARD started.")
 print("Press Q to exit.")
 
 while True:
+
     ret, frame = cap.read()
 
     if not ret:
+        print("Failed to read camera frame.")
         break
 
     # Run helmet detection
     results = model(frame, conf=0.5)
 
-    # Draw detections
+    # Draw detection boxes
     annotated_frame = results[0].plot()
 
-    # Check detected classes
     helmet_found = False
     no_helmet_found = False
 
+    # Check detected classes
     for box in results[0].boxes:
+
         class_id = int(box.cls[0])
         class_name = model.names[class_id].lower()
 
-        if "helmet" in class_name and "no" not in class_name:
+        print("Detected:", class_name)
+
+        if "with helmet" in class_name:
             helmet_found = True
 
-        if "no" in class_name and "helmet" in class_name:
+        elif "without helmet" in class_name:
             no_helmet_found = True
 
-    # Display status
+    # Decide status
     if helmet_found:
         status = "Helmet Detected"
         ignition = "Ignition ON"
+
     elif no_helmet_found:
         status = "No Helmet Found"
         ignition = "Ignition OFF"
+
     else:
         status = "No Rider Detected"
         ignition = "Ignition OFF"
 
+    # Display status
     cv2.putText(
         annotated_frame,
         status,
@@ -71,7 +79,11 @@ while True:
         2
     )
 
-    cv2.imshow("HELMGUARD - Helmet Detection", annotated_frame)
+    # Show result
+    cv2.imshow(
+        "HELMGUARD - Helmet Detection",
+        annotated_frame
+    )
 
     # Press Q to quit
     if cv2.waitKey(1) & 0xFF == ord("q"):
